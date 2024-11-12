@@ -4,7 +4,11 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
+    [SerializeField]
+    GameObject playerCamera;
+
     Rigidbody rb;
+    Animator animator;
 
     [SerializeField]
     float movementSpeed = 10.0f;
@@ -21,6 +25,7 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        animator = GetComponent<Animator>();
 
         // Initialize the rotation variables to the current rotation
         rotationY = transform.localEulerAngles.y;
@@ -45,26 +50,40 @@ public class PlayerController : MonoBehaviour
             rotationX = Mathf.Clamp(rotationX, -90, 90);
 
             // Apply the rotation to the camera
-            transform.localRotation = Quaternion.Euler(rotationX, rotationY, 0);
+            playerCamera.transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
+            transform.localRotation = Quaternion.Euler(0, rotationY, 0);
         }
+    }
+
+    private void FixedUpdate()
+    {
 
         // Get the forward direction of the player
         Vector3 playerForward = transform.forward;
         playerForward.y = 0f; // Remove vertical component
 
         // Move the player based on input and player's forward direction
-        float horizontalInput = Input.GetAxis("Horizontal");
-        float verticalInput = Input.GetAxis("Vertical");
+        float horizontalInput = Input.GetAxisRaw("Horizontal");
+        float verticalInput = Input.GetAxisRaw("Vertical");
         Vector3 movement = (horizontalInput * transform.right + verticalInput * playerForward).normalized * movementSpeed * Time.deltaTime;
 
-        // Move the player using Rigidbody.MovePosition for more responsive movement
-        rb.MovePosition(transform.position + movement);
+        // Set the velocity of the Rigidbody directly
+        if (horizontalInput != 0f || verticalInput != 0f)
+        {
+            rb.velocity = movement;
+        }
+        else
+        {
+            rb.velocity = Vector3.zero;
+        }
 
-        if (transform.rotation.x < 0.1f)
-            return;
+        animator.SetFloat("Player_Velocity", rb.velocity.magnitude);
 
         // Correct the rotation to be upright
-        Quaternion targetRotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y, 0);
-        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 2.0f);
+        if (Mathf.Abs(transform.rotation.x) > 0.1f)
+        {
+            Quaternion targetRotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y, 0);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 2.0f);
+        }
     }
 }
